@@ -14,7 +14,6 @@ UserHome = os.popen('getent passwd %s | cut -d: -f 6'%User).readline().strip()
 # print(UserHome) # /home/pi
 config_file = '%s/.config/picar-x/picar-x.conf'%UserHome
 
-
 class Picarx(object):
     PERIOD = 4095
     PRESCALER = 10
@@ -32,16 +31,15 @@ class Picarx(object):
                 ultrasonic_pins:list=['D2','D3'],
                 config:str=config_file,
                 ):
-
-        # config_flie
-        self.config_flie = fileDB(config, 774, User) #type: ignore
+        # config_file
+        self.config_file = fileDB(config, 774, User) #type: ignore
         # servos init 
         self.camera_servo_pin1 = Servo(PWM(servo_pins[0]))
         self.camera_servo_pin2 = Servo(PWM(servo_pins[1]))   
         self.dir_servo_pin = Servo(PWM(servo_pins[2])) 
-        self.dir_cal_value = int(self.config_flie.get("picarx_dir_servo", default_value=0))
-        self.cam_cal_value_1 = int(self.config_flie.get("picarx_cam_servo1", default_value=0))
-        self.cam_cal_value_2 = int(self.config_flie.get("picarx_cam_servo2", default_value=0))
+        self.dir_cal_value = int(self.config_file.get("picarx_dir_servo", default_value=0))
+        self.cam_cal_value_1 = int(self.config_file.get("picarx_cam_servo1", default_value=0))
+        self.cam_cal_value_2 = int(self.config_file.get("picarx_cam_servo2", default_value=0))
         self.dir_servo_pin.angle(self.dir_cal_value)
         self.camera_servo_pin1.angle(self.cam_cal_value_1)
         self.camera_servo_pin2.angle(self.cam_cal_value_2)
@@ -56,7 +54,7 @@ class Picarx(object):
         self.right_rear_pwm_pin = PWM(motor_pins[3])
         self.motor_direction_pins = [self.left_rear_dir_pin, self.right_rear_dir_pin]
         self.motor_speed_pins = [self.left_rear_pwm_pin, self.right_rear_pwm_pin]
-        self.cali_dir_value = self.config_flie.get("picarx_dir_motor", default_value="[1,1]")
+        self.cali_dir_value = self.config_file.get("picarx_dir_motor", default_value="[1,1]")
         self.cali_dir_value = [int(i.strip()) for i in self.cali_dir_value.strip("[]").split(",")]
         self.cali_speed_value = [0, 0]
         self.dir_current_angle = 0
@@ -109,16 +107,16 @@ class Picarx(object):
         motor -= 1
         # if value == 1:
         #     self.cali_dir_value[motor] = -1 * self.cali_dir_value[motor]
-        # self.config_flie.set("picarx_dir_motor", self.cali_dir_value)
+        # self.config_file.set("picarx_dir_motor", self.cali_dir_value)
         if value == 1:
             self.cali_dir_value[motor] = 1
         elif value == -1:
             self.cali_dir_value[motor] = -1
-        self.config_flie.set("picarx_dir_motor", self.cali_dir_value)
+        self.config_file.set("picarx_dir_motor", self.cali_dir_value)
 
     def dir_servo_angle_calibration(self,value):
         self.dir_cal_value = value
-        self.config_flie.set("picarx_dir_servo", "%s"%value)
+        self.config_file.set("picarx_dir_servo", "%s"%value)
         self.dir_servo_pin.angle(value)
 
     def set_dir_servo_angle(self,value):
@@ -128,12 +126,12 @@ class Picarx(object):
 
     def camera_servo1_angle_calibration(self,value):
         self.cam_cal_value_1 = value
-        self.config_flie.set("picarx_cam_servo1", "%s"%value)
+        self.config_file.set("picarx_cam_servo1", "%s"%value)
         self.camera_servo_pin1.angle(value)
 
     def camera_servo2_angle_calibration(self,value):
         self.cam_cal_value_2 = value
-        self.config_flie.set("picarx_cam_servo2", "%s"%value)
+        self.config_file.set("picarx_cam_servo2", "%s"%value)
         self.camera_servo_pin2.angle(value)
 
     def set_camera_servo1_angle(self,value):
@@ -141,6 +139,12 @@ class Picarx(object):
         if abs(new_angle) <= self.cam_pin1_max:
             self.cam_pin1_current_angle = new_angle
             self.camera_servo_pin1.angle(self.cam_pin1_current_angle)
+    
+    def cali_set_camera_servo1_angle(self,value):
+        self.camera_servo_pin1.angle(-1*(value + -1*self.cam_cal_value_1))
+
+    def cali_set_camera_servo2_angle(self,value):
+        self.camera_servo_pin2.angle(-1*(value + -1*self.cam_cal_value_2))
 
     def set_camera_servo2_angle(self,value):
         new_angle = self.cam_pin2_current_angle - (-1*(value + -1*self.cam_cal_value_2))

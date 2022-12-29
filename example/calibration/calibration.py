@@ -44,9 +44,9 @@ def servos_move(servo_num, value):
     if servo_num == 0:
         px.set_dir_servo_angle(value)
     elif servo_num == 1:
-        px.set_camera_servo1_angle(value)
+        px.cali_set_camera_servo1_angle(value)
     elif servo_num == 2:
-        px.set_camera_servo2_angle(value)
+        px.cali_set_camera_servo2_angle(value)
     sleep(0.2)
 
 def set_servos_offset(servo_num, value):
@@ -66,6 +66,7 @@ def show_info():
     print(manual)
     print('[ %s ] [ %s ]'%(servo_names[servo_num], motor_names[motor_num])) 
     print('offset: %s, %s'%(servos_offset, motors_offset))
+    
 
 
 def cali_helper(): 
@@ -77,7 +78,6 @@ def cali_helper():
     servos_reset()
     # show_info 
     show_info()
-
     # key control
     while True:
         # readkey
@@ -96,7 +96,7 @@ def cali_helper():
         elif key == 'w':
             servos_offset[servo_num] += step
             if servos_offset[servo_num] > 20:
-                servos_offset[servo_num] =20
+                servos_offset[servo_num] = 20
             show_info()
             # angle = servos_offset[servo_num] - servos_cali[servo_num]
             # print(1,angle)
@@ -123,7 +123,7 @@ def cali_helper():
         elif key == 'e':
             if motor_run == False:
                 motor_run = True
-                px.forward(px_power)
+                px.forward()
             else:
                 motor_run = False
                 px.stop()
