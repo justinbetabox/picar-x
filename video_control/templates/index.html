@@ -1,0 +1,113 @@
+<html>
+<head>
+    <style>
+        img {
+          height: 100%;
+          margin: 10px auto 10px;
+          display: block;
+        }
+    </style>
+    <script>        
+        document.addEventListener("keydown", keyDown)
+        function keyDown() {
+            let valid = false
+            if (!event.repeat) {
+                let keychar = event.key
+                switch(keychar) {
+                    case 'w':
+                        command = 'forward'
+                        valid = true
+                        break
+                    case 's':
+                        command = 'backward'
+                        valid = true
+                        break
+                    case 'a':
+                        command = 'left'
+                        valid = true
+                        break
+                    case 'd':
+                        command = 'right'
+                        valid = true
+                        break
+                    case 'ArrowUp':
+                        command = 'camup'
+                        valid = true
+                        break
+                    case 'ArrowDown':
+                        command = 'camdown'
+                        valid = true
+                        break
+                    case 'ArrowLeft':
+                        command = 'camleft'
+                        valid = true
+                        break
+                    case 'ArrowRight':
+                        command = 'camright'
+                        valid = true
+                        break
+                    case 'Backspace':
+                        command = 'exit'
+                        valid = true
+                        break
+                    case '1':
+                        command = 'color_detect'
+                        valid = true
+                        break
+                    case '2':
+                        command = 'human_face_detect'
+                        valid = true
+                        break
+                    case 'o':
+                        command = 'speedup'
+                        valid = true
+                        break
+                    case 'p':
+                        command = 'speeddown'
+                        valid = true
+                        break
+                }
+                if (valid){
+                    const request = new XMLHttpRequest()
+                    request.open("POST","/ProcessCommands?command="+command)
+                    request.send()
+                }
+            }
+        }
+        document.addEventListener("keyup",keyUp)
+        function keyUp() {
+            let keychar = event.key
+            let valid = false
+            switch(keychar){
+                case 'w':
+                    command = 'stop'
+                    valid = true
+                    break
+                case 's':
+                    command = 'stop'
+                    valid = true
+                    break
+                case 'a':
+                    command = 'straight'
+                    valid = true
+                    break
+                case 'd':
+                    command = 'straight'
+                    valid = true
+                    break
+            }
+            if (valid){
+                const request = new XMLHttpRequest()
+                request.open("POST","/ProcessCommands?command="+command)
+                request.send()
+            }
+        }
+</script>
+</head>
+<body>
+<h1></h1>
+
+<img id="embed" src="{{ url_for('video_feed') }}">
+
+</body>
+</html>
