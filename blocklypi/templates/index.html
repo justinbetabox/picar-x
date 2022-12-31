@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="{{ url_for('static', filename='blockly/blockly_compressed.js') }}"></script>
+        <script src="{{ url_for('static', filename='blockly/blocks_compressed.js') }}"></script>
+        <script src="{{ url_for('static', filename='blockly/msg/en.js') }}"></script>
+        <script src="{{ url_for('static', filename='blockly/python_compressed.js') }}"></script>
+        <script src="{{ url_for('static', filename='blockly/robotcar.js') }}"></script>
+    </head>
+    <body>
+        <div id="blocklyDiv" style="height: 480px; width: 600px;"></div>
+        <textarea id="textarea"></textarea>
+        <script>
+            //TODO: add blocks to workspace
+            const toolbox = {
+                "kind": "categoryToolbox",
+                "contents": [
+                    {
+                        "kind": "category",
+                        "name": "PiCarX",
+                        "contents": [
+                            {
+                                "kind": "block",
+                                "type": "forward"
+                            },
+                        ]
+                    }
+                ]
+            }
+
+            
+            const workspace = Blockly.inject('blocklyDiv', {toolbox: toolbox});
+
+            function updateCode(event) {
+                const code = Blockly.Python.workspaceToCode(workspace);
+                document.getElementById('textarea').value = code;
+            }
+            workspace.addChangeListener(updateCode);
+
+        </script>
+    </body>
+</html>
