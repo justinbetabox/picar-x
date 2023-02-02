@@ -1,6 +1,5 @@
 from flask import Flask, Response, request, render_template
 import cv2
-from picarx import Picarx
 from threading import Thread
 from robot_hat.utils import reset_mcu
 import sys

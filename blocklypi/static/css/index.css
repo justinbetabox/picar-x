@@ -1,0 +1,28 @@
+#blocklyContainer {
+    position: relative;
+    width: 75%;
+    height: 100vh;
+}
+
+#controlContainer {
+    position: relative;
+    width: 25%;
+    height: 100vh;
+}
+
+#blocklyDiv {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+.row {
+    display: flex;
+} 
+
+img {
+    margin: 0px auto 0px;
+    display: block;
+    width: 100%;
+}

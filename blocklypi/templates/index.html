@@ -1,42 +1,34 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <!--Add stylesheets here-->
+        <link rel="stylesheet" href="{{ url_for('static', filename='prism/prism.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+        
+        <!--Add needed scripts here-->
         <script src="{{ url_for('static', filename='blockly/blockly_compressed.js') }}"></script>
         <script src="{{ url_for('static', filename='blockly/blocks_compressed.js') }}"></script>
         <script src="{{ url_for('static', filename='blockly/msg/en.js') }}"></script>
         <script src="{{ url_for('static', filename='blockly/python_compressed.js') }}"></script>
         <script src="{{ url_for('static', filename='blockly/robotcar.js') }}"></script>
+        <script src="{{ url_for('static', filename='prism/prism.js') }}"></script>
     </head>
     <body>
-        <div id="blocklyDiv" style="height: 480px; width: 600px;"></div>
-        <textarea id="textarea"></textarea>
-        <script>
-            //TODO: add blocks to workspace
-            const toolbox = {
-                "kind": "categoryToolbox",
-                "contents": [
-                    {
-                        "kind": "category",
-                        "name": "PiCarX",
-                        "contents": [
-                            {
-                                "kind": "block",
-                                "type": "forward"
-                            },
-                        ]
-                    }
-                ]
-            }
-
-            
-            const workspace = Blockly.inject('blocklyDiv', {toolbox: toolbox});
-
-            function updateCode(event) {
-                const code = Blockly.Python.workspaceToCode(workspace);
-                document.getElementById('textarea').value = code;
-            }
-            workspace.addChangeListener(updateCode);
-
-        </script>
+        <div class="row">
+            <div class="column column-1" id="blocklyContainer">
+                <div id="blocklyDiv"></div>
+            </div>
+            <div class="column column-2" id="controlContainer">
+                <div id="video_feed">
+                    <img id="embed" src="{{ url_for('video_feed') }}">
+                </div>
+                <div id="startstopcontainer">
+                    <button onclick="runCode()">Run Code</button>
+                </div>
+                <pre>
+<code id="code_display" class="language-python"></code></pre>
+            </div>
+        </div>
+        <script src="{{ url_for('static', filename='js/index.js') }}"></script>
     </body>
 </html>
