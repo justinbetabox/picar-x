@@ -1,13 +1,105 @@
 <html>
 <head>
     <style>
-        img {
-          height: 100%;
-          margin: 10px auto 10px;
-          display: block;
+        body {
+            margin: 0;
+            padding: 0;
         }
+        
+        #information {
+            height: fit-content;
+            background-color: dodgerblue;
+            overflow: hidden;
+        }
+
+        img {
+            height: 75%;
+            margin: 0px auto 0px;
+            display: block;
+        }
+
+        #instructions {
+            margin: auto;
+            width: 50%;
+            padding-left: 50px;
+        }
+
+        .float-left {
+            float: left;
+            width: 33%;
+        }
+
+        #information label {
+            color: antiquewhite;
+        }
+
+        *,
+        *:before,
+        *:after {
+        box-sizing: border-box;
+        }
+
+        .toggle {
+            cursor: pointer;
+            display: inline-block;
+            padding: 5px;
+        }
+
+        .toggle-switch {
+            display: inline-block;
+            background: #ccc;
+            border-radius: 16px;
+            width: 58px;
+            height: 32px;
+            position: relative;
+            vertical-align: middle;
+            transition: background 0.25s;
+        }
+
+        .toggle-switch:before, .toggle-switch:after {
+            content: "";
+        }
+
+        .toggle-switch:before {
+            display: block;
+            background: linear-gradient(to bottom, #fff 0%, #eee 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+            width: 24px;
+            height: 24px;
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            transition: left 0.25s;
+        }
+
+        .toggle:hover .toggle-switch:before {
+            background: linear-gradient(to bottom, #fff 0%, #fff 100%);
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+        }
+
+        .toggle-checkbox:checked + .toggle-switch {
+            background: #56c080;
+        }
+
+        .toggle-checkbox:checked + .toggle-switch:before {
+            left: 30px;
+        }
+
+        .toggle-checkbox {
+            position: absolute;
+            visibility: hidden;
+        }
+
+        .toggle-label {
+            margin-left: 5px;
+            position: relative;
+            top: 2px;
+        }
+
+
     </style>
-    <script>        
+    <script>
         document.addEventListener("keydown", keyDown)
         function keyDown() {
             let valid = false
@@ -44,18 +136,6 @@
                         break
                     case 'ArrowRight':
                         command = 'camright'
-                        valid = true
-                        break
-                    case 'Backspace':
-                        command = 'exit'
-                        valid = true
-                        break
-                    case '1':
-                        command = 'color_detect'
-                        valid = true
-                        break
-                    case '2':
-                        command = 'human_face_detect'
                         valid = true
                         break
                     case 'o':
@@ -102,12 +182,64 @@
                 request.send()
             }
         }
-</script>
+    </script>
 </head>
 <body>
-<div id="video_feed">
-    <img id="embed" src="{{ url_for('video_feed') }}">
-</div>
+    <div id="information">
+        <label class="toggle">
+            <span class="toggle-label">Human Face Detect: </span>
+            <input class="toggle-checkbox" type="checkbox" id="human_face_checkbox">
+            <div class="toggle-switch"></div>
+        </label>
+        <label class="toggle">
+            <span class="toggle-label">Color Detect: </span>
+            <input class="toggle-checkbox" type="checkbox" id="color_checkbox">
+            <div class="toggle-switch"></div>
+        </label>
+        <button type="button" id="restart_button" onclick="restart()">Restart</button>
+    </div>
+    <div id="video_feed">
+        <img id="embed" src="{{ url_for('video_feed') }}">
+    </div>
+    <div id="instructions">
+        <div id="driving" class="float-left">
+            <p>W: Forward</p>
+            <p>A: Turn Left</p>
+            <p>S: Reverse</p>
+            <p>D: Turn Right</p>
+        </div>
+        <div id="speed" class="float-left">
+            <p>O: Speed Down</p>
+            <p>P: Speed Up</p>
+        </div>
+        <div id="camera" class="float-left">
+            <p>Up: Camera Up</p>
+            <p>Left: Camera Left</p>
+            <p>Down: Camera Down</p>
+            <p>Right: Camera Right</p>
+        </div>
+    </div>
+    <script>
+        var human_face_check = document.getElementById("human_face_checkbox")
+        human_face_check.addEventListener('change', toggleHumanFaceDetect)
+        function toggleHumanFaceDetect() {
+            const request = new XMLHttpRequest()
+            request.open("POST","/ProcessCommands?command=human_face_detect")
+            request.send()
+        }
+        var color_check = document.getElementById("color_checkbox")
+        color_check.addEventListener('change', toggleColorDetect)
+        function toggleColorDetect() {
+            const request = new XMLHttpRequest()
+            request.open("POST","/ProcessCommands?command=color_detect")
+            request.send()
+        }
+        function restart() {
+            const request = new XMLHttpRequest()
+            request.open("POST","/ProcessCommands?command=exit")
+            request.send()
+        }
+    </script>
 
 </body>
 </html>

@@ -2,6 +2,7 @@ from flask import Flask, Response, request, render_template
 import cv2
 from threading import Thread
 from robot_hat.utils import reset_mcu
+import os
 import sys
 from time import sleep, time, strftime, localtime
 import numpy as np
@@ -61,6 +62,9 @@ def ProcessCommands():
     elif request.args.get('command') == 'speeddown': #type: ignore
         if px.speed > 10:
             px.speed -= 10
+    elif request.args.get('command') == 'exit': #type: ignore
+        video_stream_widget.endCapture()
+        os.execv(sys.argv[0], sys.argv)
     return('/')
 
 if __name__ == '__main__':
