@@ -64,8 +64,8 @@ def ProcessCommands():
             px.speed -= 10
     elif request.args.get('command') == 'exit': #type: ignore
         video_stream_widget.endCapture()
-        os.execv(sys.argv[0], sys.argv)
+        os.execv(sys.executable, ['python'] + [sys.argv[0]])
     return('/')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3000, threaded=True)
+    app.run(host='0.0.0.0', port=5000, threaded=True)

@@ -3,6 +3,7 @@ from robot_hat import Grayscale_Module, Ultrasonic
 from robot_hat.utils import reset_mcu
 import time
 import os
+import math
 
 reset_mcu()
 time.sleep(0.2)
@@ -45,8 +46,10 @@ class Picarx(object):
         self.camera_servo_pin2.angle(self.cam_cal_value_2)
         self.cam_pin1_current_angle = self.cam_cal_value_1
         self.cam_pin2_current_angle = self.cam_cal_value_2
-        self.cam_pin1_max = 40 + self.cam_cal_value_1
-        self.cam_pin2_max = 40 + self.cam_cal_value_2
+        self.cam_pin1_max = 50 + self.cam_cal_value_1
+        self.cam_pin1_min = -50 + self.cam_cal_value_1
+        self.cam_pin2_max = 50 + self.cam_cal_value_2
+        self.cam_pin2_min = -50 + self.cam_cal_value_2
         # motors init
         self.left_rear_dir_pin = Pin(motor_pins[0])
         self.right_rear_dir_pin = Pin(motor_pins[1])
@@ -135,21 +138,19 @@ class Picarx(object):
         self.camera_servo_pin2.angle(value)
 
     def set_camera_servo1_angle(self,value):
-        new_angle = self.cam_pin1_current_angle - (-1*(value + -1*self.cam_cal_value_1))
-        if abs(new_angle) <= self.cam_pin1_max:
-            self.cam_pin1_current_angle = new_angle
+        if self.cam_pin1_current_angle + value in range(self.cam_pin1_min, self.cam_pin1_max + 10):
+            self.cam_pin1_current_angle = self.cam_pin1_current_angle + value
             self.camera_servo_pin1.angle(self.cam_pin1_current_angle)
-    
+        
     def cali_set_camera_servo1_angle(self,value):
-        self.camera_servo_pin1.angle(-1*(value + -1*self.cam_cal_value_1))
+        self.camera_servo_pin1.angle(-value + self.cam_cal_value_1)
 
     def cali_set_camera_servo2_angle(self,value):
-        self.camera_servo_pin2.angle(-1*(value + -1*self.cam_cal_value_2))
+        self.camera_servo_pin2.angle(-value + self.cam_cal_value_2)
 
     def set_camera_servo2_angle(self,value):
-        new_angle = self.cam_pin2_current_angle - (-1*(value + -1*self.cam_cal_value_2))
-        if abs(new_angle) <= self.cam_pin2_max:
-            self.cam_pin2_current_angle = new_angle
+        if self.cam_pin2_current_angle + value in range(self.cam_pin2_min, self.cam_pin2_max + 10):
+            self.cam_pin2_current_angle = self.cam_pin2_current_angle + value
             self.camera_servo_pin2.angle(self.cam_pin2_current_angle)
 
     def set_power(self,speed):
