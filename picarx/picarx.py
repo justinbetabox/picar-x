@@ -11,9 +11,16 @@ time.sleep(0.2)
 user = os.popen("echo ${SUDO_USER:-$(who -m | awk '{ print $1 }')}").readline().strip()
 
 def constrain(x, min_val, max_val):
-    '''
-    Constrains value to be within a range.
-    '''
+    """Constrains a given value between two given values. Should not be called by the user.
+
+    Args:
+        x (integer): Value to constrain.
+        min_val (integer): Minimum value.
+        max_val (integer): Maximum value.
+
+    Returns:
+        integer: Constrained value.
+    """   
     return max(min_val, min(max_val, x))
 
 class Picarx(object):
@@ -46,17 +53,17 @@ class Picarx(object):
                 config:str=CONFIG,
                 ):
 
-        # --------- config_flie ---------
-        self.config_flie = fileDB(config, 774, user)
+        # --------- config_file ---------
+        self.config_file = fileDB(config, 774, user)
 
         # --------- servos init ---------
         self.cam_pan = Servo(servo_pins[0])
         self.cam_tilt = Servo(servo_pins[1])   
         self.dir_servo = Servo(servo_pins[2])
         # get calibration values
-        self.dir_cali_val = float(self.config_flie.get("picarx_dir_servo", default_value=0))
-        self.cam_pan_cali_val = float(self.config_flie.get("picarx_cam_pan_servo", default_value=0))
-        self.cam_tilt_cali_val = float(self.config_flie.get("picarx_cam_tilt_servo", default_value=0))
+        self.dir_cali_val = float(self.config_file.get("picarx_dir_servo", default_value=0))
+        self.cam_pan_cali_val = float(self.config_file.get("picarx_cam_pan_servo", default_value=0))
+        self.cam_tilt_cali_val = float(self.config_file.get("picarx_cam_tilt_servo", default_value=0))
         # set servos to init angle
         self.dir_servo.angle(self.dir_cali_val)
         self.cam_pan.angle(self.cam_pan_cali_val)
@@ -70,7 +77,7 @@ class Picarx(object):
         self.motor_direction_pins = [self.left_motor_dir, self.right_motor_dir]
         self.motor_speed_pins = [self.left_motor_pwm, self.right_motor_pwm]
         # get calibration values
-        self.motor_direction_cali_val = self.config_flie.get("picarx_dir_motor", default_value="[1, 1]")
+        self.motor_direction_cali_val = self.config_file.get("picarx_dir_motor", default_value="[1, 1]")
         self.motor_direction_cali_val = [int(i.strip()) for i in self.motor_direction_cali_val.strip().strip("[]").split(",")]
         self.motor_speed_cali_val = [0, 0]
         self.dir_current_angle = 0
@@ -87,9 +94,9 @@ class Picarx(object):
         adc0, adc1, adc2 = [pin for pin in grayscale_pins]
         self.grayscale = Grayscale_Module(adc0, adc1, adc2, reference=None)
         # get reference
-        self.line_reference = self.config_flie.get("line_reference", default_value=str(self.DEFAULT_LINE_REF))
+        self.line_reference = self.config_file.get("line_reference", default_value=str(self.DEFAULT_LINE_REF))
         self.line_reference = [float(i) for i in self.line_reference.strip().strip('[]').split(',')]
-        self.cliff_reference = self.config_flie.get("cliff_reference", default_value=str(self.DEFAULT_CLIFF_REF))
+        self.cliff_reference = self.config_file.get("cliff_reference", default_value=str(self.DEFAULT_CLIFF_REF))
         self.cliff_reference = [float(i) for i in self.cliff_reference.strip().strip('[]').split(',')]
         # transfer reference
         self.grayscale.set_reference(self.line_reference)
@@ -99,13 +106,12 @@ class Picarx(object):
         self.ultrasonic = Ultrasonic(Pin(tring), Pin(echo))
         
     def set_motor_speed(self, motor, speed):
-        ''' set motor speed
-        
-        param motor: motor index, 1 means left motor, 2 means right motor
-        type motor: int
-        param speed: speed
-        type speed: int      
-        '''
+        """Sets the given motor's speed. Should not be called by the user.
+
+        Args:
+            motor (integer): Index of the desired motor, 1 is left, 2 is right.
+            speed (integer): Desired speed of the motor between 0 and 100.
+        """
         motor -= 1
         if speed >= 0:
             direction = 1 * self.motor_direction_cali_val[motor]
@@ -132,55 +138,95 @@ class Picarx(object):
             self.motor_speed_cali_val[1] = 0
 
     def motor_direction_calibrate(self, motor, value):
-        ''' set motor direction calibration value
-        
-        param motor: motor index, 1 means left motor, 2 means right motor
-        type motor: int
-        param value: speed
-        type value: int
-        '''      
+        """Sets motor direction calibration value. Should not be called by the user.
+
+        Args:
+            motor (integer): Index of the desired motor, 1 is left, 2 is right.
+            value (integer): Direction of the motor, 0 is backward, 1 is forward.
+        """
         motor -= 1
         if value == 1:
             self.motor_direction_cali_val[motor] = 1
         elif value == -1:
             self.motor_direction_cali_val[motor] = -1
-        self.config_flie.set("picarx_dir_motor", self.motor_direction_cali_val)
+        self.config_file.set("picarx_dir_motor", self.motor_direction_cali_val)
 
     def dir_servo_calibrate(self, value):
+        """Sets the direction servo calibration value. Should not be called by the user.
+
+        Args:
+            value (integer): Value to set the calibration of the direction servo.
+        """        
         self.dir_cali_val = value
-        self.config_flie.set("picarx_dir_servo", "%s"%value)
+        self.config_file.set("picarx_dir_servo", "%s"%value)
         self.dir_servo.angle(value)
 
     def set_dir_servo_angle(self, value):
+        """Sets the direction servo angle between -35 and 35.
+
+        Args:
+            value (integer): Desired angle of the servo.
+        """        
         self.dir_current_angle = constrain(value, self.DIR_MIN, self.DIR_MAX)
         angle_val  = value + self.dir_cali_val
         self.dir_servo.angle(angle_val)
 
     def cam_pan_servo_calibrate(self, value):
+        """Sets the camera's pan servo calibration value. Should not be called by the user.
+
+        Args:
+            value (integer): Value to set the calibration of the camera pan servo.
+        """        
         self.cam_pan_cali_val = value
-        self.config_flie.set("picarx_cam_pan_servo", "%s"%value)
+        self.config_file.set("picarx_cam_pan_servo", "%s"%value)
         self.cam_pan.angle(value)
 
     def cam_tilt_servo_calibrate(self, value):
+        """Sets the camera's tilt servo calibration value. Should not be called by the user.
+
+        Args:
+            value (integer): Value to set the calibration of the camera tilt servo.
+        """ 
         self.cam_tilt_cali_val = value
-        self.config_flie.set("picarx_cam_tilt_servo", "%s"%value)
+        self.config_file.set("picarx_cam_tilt_servo", "%s"%value)
         self.cam_tilt.angle(value)
 
     def set_cam_pan_angle(self, value):
+        """Sets the camera pan servo angle between -90 and 90.
+
+        Args:
+            value (integer): Desired angle of the servo.
+        """     
         value = constrain(self.pan_current_angle - value, self.CAM_PAN_MIN, self.CAM_PAN_MAX)
         self.cam_pan.angle(-1*(value + -1*self.cam_pan_cali_val))
         self.pan_current_angle = value
 
     def set_cam_tilt_angle(self,value):
+        """Sets the camera tilt servo angle between -35 and 65.
+
+        Args:
+            value (integer): Desired angle of the servo.
+        """     
         value = constrain(self.tilt_current_angle - value, self.CAM_TILT_MIN, self.CAM_TILT_MAX)
         self.cam_tilt.angle(-1*(value + -1*self.cam_tilt_cali_val))
         self.tilt_current_angle = value
 
-    def set_speed(self, speed): 
+    def set_speed(self, speed):
+        """Sets the speed of the robot car between 0 and 100.
+
+        Args:
+            speed (integer): Desired speed of the car.
+        """        
         self.current_speed = speed
 
     def backward(self, speed=50):
+        """Sets the direction of the car to backwards at the desired speed.
+
+        Args:
+            speed (integer, optional): Desired speed of the car. Defaults to 50.
+        """        
         current_angle = self.dir_current_angle
+        self.set_speed(speed)
         self.current_direction = -1
         if current_angle != 0:
             abs_current_angle = abs(current_angle)
@@ -198,7 +244,13 @@ class Picarx(object):
             self.set_motor_speed(2, speed)  
 
     def forward(self, speed=50):
+        """Sets the direction of the car to forwards at the desired speed.
+
+        Args:
+            speed (integer, optional): Desired speed of the car. Defaults to 50.
+        """ 
         current_angle = self.dir_current_angle
+        self.set_speed(speed)
         self.current_direction = 1
         if current_angle != 0:
             abs_current_angle = abs(current_angle)
@@ -217,32 +269,64 @@ class Picarx(object):
                  
 
     def stop(self):
+        """Stops the car from moving.
+        """        
         self.current_direction = 0
         self.set_motor_speed(1, 0)
         self.set_motor_speed(2, 0)
 
     def get_distance(self):
+        """Gets the distance from an object.
+
+        Returns:
+            float: Distance from an object.
+        """        
         return self.ultrasonic.read()
 
     def set_line_reference(self, value):
+        """Sets the desired line reference values.
+
+        Args:
+            value (list): 1 * 3 list of desired reference values.
+
+        Raises:
+            ValueError: Raised if value is not a 1*3 list.
+        """        
         if isinstance(value, list) and len(value) == 3:
             self.line_reference = value
             self.grayscale.set_reference(self.line_reference)
-            self.config_flie.set("line_reference", self.line_reference)
+            self.config_file.set("line_reference", self.line_reference)
         else:
             raise ValueError("grayscale reference must be a 1*3 list")
 
     def get_grayscale_data(self):
+        """Gets the grayscale values.
+
+        Returns:
+            list: List of current grayscale values.
+        """        
         return self.grayscale.read()
 
     def get_line_status(self,gm_val_list = None):
+        """Gets the line status.
+
+        Returns:
+            string: The direction the line is going.
+        """     
         return self.grayscale.get_status()
 
-
     def set_cliff_reference(self, value):
+        """Sets the desired cliff reference values.
+
+        Args:
+            value (list): 1 * 3 list of desired reference values.
+
+        Raises:
+            ValueError: Raised if value is not a 1*3 list.
+        """   
         if isinstance(value, list) and len(value) == 3:
             self.cliff_reference = value
-            self.config_flie.set("cliff_reference", self.cliff_reference)
+            self.config_file.set("cliff_reference", self.cliff_reference)
         else:
             raise ValueError("grayscale reference must be a 1*3 list")
 
