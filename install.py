@@ -15,6 +15,9 @@ def run_command(cmd):
     output = p.stdout.read().decode()
     return p.wait(), output.strip()
 
+def run_as_pi(cmd):
+    return run_command(f"sudo -u pi {cmd}")
+
 def confirm(q):
     try:
         return input(f"{q} [y/N]: ").lower() in ("y", "yes")
@@ -178,9 +181,9 @@ def setup_jupyterlab():
     run_command("apt-get update -y")
     run_command("apt-get install -y python3-pip")
 
-    # Install for pi user, not root
-    run_command("sudo -u pi python3 -m pip install --user --upgrade pip")
-    run_command("sudo -u pi python3 -m pip install --user jupyterlab")
+    # Install for pi user, not root (always with --break-system-packages for Bookworm)
+    run_as_pi("python3 -m pip install --user --upgrade --break-system-packages pip")
+    run_as_pi("python3 -m pip install --user --break-system-packages jupyterlab")
 
     # Find path to jupyter-lab for user pi
     jupyter_bin = "/home/pi/.local/bin/jupyter-lab"
@@ -189,11 +192,13 @@ def setup_jupyterlab():
 
     if not os.path.isfile(jupyter_bin):
         print_err("jupyter-lab not found in /home/pi/.local/bin after install!")
+        print_err("Check the pip install output above for errors, or try re-installing JupyterLab manually:")
+        print_err("    sudo -u pi python3 -m pip install --user --upgrade --break-system-packages jupyterlab")
         return
 
     # Write config for JupyterLab
     jupyter_config_dir = "/home/pi/.jupyter"
-    os.makedirs(jupyter_config_dir, exist_ok=True)
+    run_as_pi(f"mkdir -p {jupyter_config_dir}")
 
     config_text = """
 c.ServerApp.ip = '0.0.0.0'
@@ -202,11 +207,14 @@ c.ServerApp.token = ''
 c.ServerApp.password = ''
 c.ServerApp.root_dir = '/home/pi'
 """
-    config_path = os.path.join(jupyter_config_dir, "jupyter_lab_config.py")
-    with open(config_path, "w") as f:
+    # Write config as user pi to avoid permission issues
+    tmp_config_path = "/tmp/jupyter_lab_config.py"
+    with open(tmp_config_path, "w") as f:
         f.write(config_text)
+    run_as_pi(f"cp {tmp_config_path} {jupyter_config_dir}/jupyter_lab_config.py")
+    os.remove(tmp_config_path)
 
-    # Write the systemd service file
+    # Write the systemd service file (owned by root, but runs as pi)
     service_text = f"""[Unit]
 Description=JupyterLab Server
 
@@ -235,6 +243,10 @@ WantedBy=multi-user.target
     except PermissionError:
         print_err("Permission denied writing jupyterlab service file! Run as sudo.")
 
+def fix_pi_permissions():
+    print_info("Fixing permissions for pi user on .local and .jupyter...")
+    run_command("chown -R pi:pi /home/pi/.local /home/pi/.jupyter")
+
 def do(msg="", cmd=""):
     print(f" - {msg} ... ", end='', flush=True)
     status, result = run_command(cmd)
@@ -262,12 +274,13 @@ def main():
 
     print_info("For full camera/I2C/SPI access, add your user to 'video', 'i2c', and 'spi' groups if needed.")
 
-    if confirm("Configure I2S amplifier (audio) now?"):
-        setup_audio_bookworm()
-
     if confirm("Install and configure JupyterLab accessible over network without password?"):
         setup_jupyterlab()
 
+    if confirm("Configure I2S amplifier (audio) now?"):
+        setup_audio_bookworm()
+
+    fix_pi_permissions()
     print_success("All done! Please reboot your Pi before using picar-x with audio and JupyterLab.")
 
 if __name__ == "__main__":
