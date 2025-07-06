@@ -57,11 +57,15 @@ ExecStart=/usr/bin/aplay -D default -t raw -r 44100 -c 2 -f S16_LE /dev/zero
 [Install]
 WantedBy=multi-user.target
 """
-    with open("/etc/systemd/system/aplay.service", "w") as f:
-        f.write(aplay_service)
-    run_command("systemctl daemon-reload")
-    run_command("systemctl disable aplay")
-    print_info("Created aplay systemd service (disabled by default).")
+    try:
+        with open("/etc/systemd/system/aplay.service", "w") as f:
+            f.write(aplay_service)
+        run_command("systemctl daemon-reload")
+        run_command("systemctl disable aplay")  # Disabled by default
+        print_info("Created aplay systemd service (disabled by default).")
+    except PermissionError:
+        print_err("Permission denied writing aplay.service file! Run as sudo.")
+
     if confirm("Activate '/dev/zero' playback in background? [RECOMMENDED]"):
         run_command("systemctl enable aplay")
         need_reboot = True
@@ -127,9 +131,12 @@ fi
 
 exit 0
 """
-    with open("/usr/local/bin/auto_sound_card", "w") as f:
-        f.write(auto_sound_card_script)
-    os.chmod("/usr/local/bin/auto_sound_card", 0o755)
+    try:
+        with open("/usr/local/bin/auto_sound_card", "w") as f:
+            f.write(auto_sound_card_script)
+        os.chmod("/usr/local/bin/auto_sound_card", 0o755)
+    except PermissionError:
+        print_err("Permission denied writing auto_sound_card script! Run as sudo.")
 
     # Run auto_sound_card script once
     run_command("/usr/local/bin/auto_sound_card 100")
@@ -145,22 +152,97 @@ ExecStart=/usr/local/bin/auto_sound_card
 [Install]
 WantedBy=multi-user.target
 """
-    with open("/etc/systemd/system/auto_sound_card.service", "w") as f:
-        f.write(auto_sound_card_service)
-    run_command("systemctl daemon-reload")
-    run_command("systemctl enable auto_sound_card")
-    print_success("Configured auto_sound_card for boot.")
+    try:
+        with open("/etc/systemd/system/auto_sound_card.service", "w") as f:
+            f.write(auto_sound_card_service)
+        run_command("systemctl daemon-reload")
+        run_command("systemctl enable auto_sound_card")
+        print_success("Configured auto_sound_card for boot.")
+    except PermissionError:
+        print_err("Permission denied writing auto_sound_card service file! Run as sudo.")
 
     # Prompt for speaker test
     if confirm("Do you wish to test your system now?"):
         print_info("Testing speakers...")
         run_command("speaker-test -l5 -c2 -t wav")
+
     print_success("I2S audio setup complete!")
 
     if need_reboot and confirm("A reboot is required to apply changes. Reboot now?"):
         run_command("sync")
         run_command("reboot")
         sys.exit(0)
+
+def setup_jupyterlab():
+    print("\n--- Installing JupyterLab ---")
+    run_command("apt-get update -y")
+    run_command("apt-get install -y python3-pip")
+
+    # Install for pi user, not root
+    run_command("sudo -u pi python3 -m pip install --user --upgrade pip")
+    run_command("sudo -u pi python3 -m pip install --user jupyterlab")
+
+    # Find path to jupyter-lab for user pi
+    jupyter_bin = "/home/pi/.local/bin/jupyter-lab"
+    if not os.path.isfile(jupyter_bin):
+        jupyter_bin = "/home/pi/.local/bin/jupyter"
+
+    if not os.path.isfile(jupyter_bin):
+        print_err("jupyter-lab not found in /home/pi/.local/bin after install!")
+        return
+
+    # Write config for JupyterLab
+    jupyter_config_dir = "/home/pi/.jupyter"
+    os.makedirs(jupyter_config_dir, exist_ok=True)
+
+    config_text = """
+c.ServerApp.ip = '0.0.0.0'
+c.ServerApp.open_browser = False
+c.ServerApp.token = ''
+c.ServerApp.password = ''
+c.ServerApp.root_dir = '/home/pi'
+"""
+    config_path = os.path.join(jupyter_config_dir, "jupyter_lab_config.py")
+    with open(config_path, "w") as f:
+        f.write(config_text)
+
+    # Write the systemd service file
+    service_text = f"""[Unit]
+Description=JupyterLab Server
+
+[Service]
+Type=simple
+PIDFile=/run/jupyter.pid
+ExecStart={jupyter_bin} --no-browser --ip=0.0.0.0 --port=8888 --notebook-dir=/home/pi
+User=pi
+Group=pi
+WorkingDirectory=/home/pi
+Environment="PATH=/home/pi/.local/bin:/usr/bin:/bin"
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+"""
+    service_path = "/etc/systemd/system/jupyterlab.service"
+    try:
+        with open(service_path, "w") as f:
+            f.write(service_text)
+        run_command("systemctl daemon-reload")
+        run_command("systemctl enable jupyterlab")
+        run_command("systemctl start jupyterlab")
+        print_success("JupyterLab service installed and started.")
+    except PermissionError:
+        print_err("Permission denied writing jupyterlab service file! Run as sudo.")
+
+def do(msg="", cmd=""):
+    print(f" - {msg} ... ", end='', flush=True)
+    status, result = run_command(cmd)
+    if status == 0 or status is None:
+        print("Done")
+    else:
+        print("\033[1;35mError\033[0m")
+        print(f"{msg} error:\nStatus: {status}\nError: {result}")
 
 def main():
     if os.geteuid() != 0:
@@ -180,11 +262,13 @@ def main():
 
     print_info("For full camera/I2C/SPI access, add your user to 'video', 'i2c', and 'spi' groups if needed.")
 
-    # Audio setup
     if confirm("Configure I2S amplifier (audio) now?"):
         setup_audio_bookworm()
 
-    print_success("All done! Please reboot your Pi before using picar-x with audio.")
+    if confirm("Install and configure JupyterLab accessible over network without password?"):
+        setup_jupyterlab()
+
+    print_success("All done! Please reboot your Pi before using picar-x with audio and JupyterLab.")
 
 if __name__ == "__main__":
     main()
