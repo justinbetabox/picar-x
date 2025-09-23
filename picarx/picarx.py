@@ -27,10 +27,10 @@ class Picarx:
 
     DIR_MIN: int = -30
     DIR_MAX: int = 30
-    CAM_PAN_MIN: int = -90
-    CAM_PAN_MAX: int = 90
-    CAM_TILT_MIN: int = -35
-    CAM_TILT_MAX: int = 65
+    CAM_PAN_MIN: int = -45
+    CAM_PAN_MAX: int = 45
+    CAM_TILT_MIN: int = -30
+    CAM_TILT_MAX: int = 45
 
     PERIOD: int = 4095
     PRESCALER: int = 10
@@ -147,7 +147,8 @@ class Picarx:
         self._running = True
 
         # start background ramp thread
-        threading.Thread(target=self._ramp_loop, daemon=True).start()
+        self._ramp_thread = threading.Thread(target=self._ramp_loop, daemon=True)
+        self._ramp_thread.start()
 
 
     def _ramp_loop(self) -> None:
@@ -317,9 +318,17 @@ class Picarx:
 
 
     def stop(self) -> None:
-        """Smooth ramp back to zero on both motors."""
+        """Coast to zero without killing the ramp thread."""
+        # Zero targets (ramp will bring PWM to 0)
         self.set_motor_speed(1, 0)
         self.set_motor_speed(2, 0)
+
+        # Optionally zero outputs immediately; keep driver enabled
+        for pwm in self.motor_speed_pins:
+            pwm.pulse_width_percent(0)
+
+        # Leave direction pins and ramp thread alone.
+        # No call to self.shutdown() here.
 
     def shutdown(self) -> None:
         """Call this if you ever want to cleanly stop the ramp thread."""
@@ -420,6 +429,10 @@ class Picarx:
         """
         # 1) stop the ramp thread
         self.shutdown()
+        try:
+            self._ramp_thread.join(timeout=0.5)
+        except Exception:
+            pass
         # 2) bring motors to zero
         try:
             self.stop()
@@ -438,3 +451,4 @@ if __name__ == "__main__":
     px.forward(50)
     time.sleep(1)
     px.stop()
+    
